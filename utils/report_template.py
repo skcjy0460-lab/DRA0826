@@ -58,6 +58,26 @@ def _money_row(label: str, value: Decimal, note: str = "", total: bool = False, 
     """
 
 
+def _grid_cell(label: str, value: Decimal, note: str = "", diff_html: str = "") -> str:
+    note_html = f'<span class="row-note">{note}</span>' if note else ""
+    diff_block = f'<div class="mc-diff">{diff_html}</div>' if diff_html else ""
+    return f"""
+    <div class="mc-col">
+        <div class="mc-label">{label}{note_html}</div>
+        <div class="mc-value">{fmt_won(value)}<span class="won">원</span></div>
+        {diff_block}
+    </div>
+    """
+
+
+def _money_grid(pairs) -> str:
+    """pairs: [(left_cell_html, right_cell_html), ...] 2열 그리드로 렌더링."""
+    rows_html = ""
+    for left, right in pairs:
+        rows_html += f'<div class="money-grid-row">{left}{right}</div>'
+    return f'<div class="money-grid">{rows_html}</div>'
+
+
 def build_report_html(
     report_data: Dict[str, Any],
     totals: Dict[str, Any],
@@ -152,25 +172,35 @@ def build_report_html(
         diff, pct = compute_diff(totals.get(key_path), prev_totals.get(key_path))
         return _diff_text(diff, pct, unit=unit)
 
-    payment_rows = "".join(
-        [
-            _money_row("현금", totals["cash"], diff_html=diff_for("cash")),
-            _money_row("카드", totals["card"], diff_html=diff_for("card")),
-            _money_row("미수금", totals["unpaid"], diff_html=diff_for("unpaid")),
-            _money_row("비급여", totals["non_covered"], note="참고"),
-            _money_row("절사", totals["rounding_cut"]),
-        ]
-    )
-    if totals["custom_amount_sum"] > 0:
-        payment_rows += _money_row("기타 항목 합계", totals["custom_amount_sum"])
+    payment_pairs = [
+        (
+            _grid_cell("현금", totals["cash"], diff_html=diff_for("cash")),
+            _grid_cell("카드", totals["card"], diff_html=diff_for("card")),
+        ),
+        (
+            _grid_cell("미수금", totals["unpaid"], diff_html=diff_for("unpaid")),
+            _grid_cell("비급여", totals["non_covered"], note="참고"),
+        ),
+        (
+            _grid_cell("절사", totals["rounding_cut"]),
+            _grid_cell("기타 항목 합계", totals["custom_amount_sum"]),
+        ),
+    ]
+    payment_grid_html = _money_grid(payment_pairs)
 
-    discount_rows = "".join(
-        [
-            _money_row("감면", totals["exemption"]),
-            _money_row("할인", totals["discount"]),
-            _money_row("할인 합계", totals["total_discount"], total=True),
-        ]
-    )
+    discount_pairs = [
+        (
+            _grid_cell("감면", totals["exemption"]),
+            _grid_cell("할인", totals["discount"]),
+        ),
+    ]
+    discount_grid_html = _money_grid(discount_pairs)
+    discount_total_html = f"""
+    <div class="ledger-total-row">
+        <span class="lt-label">할인 합계</span>
+        <span class="lt-value">{fmt_won(totals['total_discount'])}<span class="won">원</span></span>
+    </div>
+    """
 
     custom_count_items = [c for c in custom_items if c.get("category") == "인원"]
     custom_amount_items = [c for c in custom_items if c.get("category") == "금액"]
@@ -469,6 +499,74 @@ def build_report_html(
     .diff-down {{ color: var(--down); }}
     .diff-flat {{ color: #9a9484; }}
 
+    /* ---------- 2열 금액 그리드 (수납금/할인금) ---------- */
+    .money-grid {{
+        border-top: 1px solid var(--panel-border);
+    }}
+    .money-grid-row {{
+        display: flex;
+        border-bottom: 1px solid var(--hairline);
+    }}
+    .money-grid-row .mc-col {{
+        flex: 1;
+        padding: 11px 16px;
+    }}
+    .money-grid-row .mc-col:first-child {{
+        border-right: 1px solid var(--hairline);
+    }}
+    .mc-label {{
+        font-size: 11px;
+        color: #7a7462;
+        letter-spacing: 0.3px;
+        margin-bottom: 4px;
+    }}
+    .mc-value {{
+        font-family: 'Noto Serif KR', serif;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+    }}
+    .mc-value .won {{
+        font-family: 'Noto Sans KR', sans-serif;
+        font-size: 11px;
+        font-weight: 400;
+        color: #8b8570;
+        margin-left: 1px;
+    }}
+    .mc-diff {{
+        margin-top: 3px;
+        font-size: 10.5px;
+    }}
+    .ledger-total-row {{
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        border-top: 2px solid var(--gold);
+        border-bottom: 2px solid var(--gold);
+        background: var(--panel);
+        padding: 10px 16px;
+    }}
+    .ledger-total-row .lt-label {{
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--ink);
+        letter-spacing: 0.5px;
+    }}
+    .ledger-total-row .lt-value {{
+        font-family: 'Noto Serif KR', serif;
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+    }}
+    .ledger-total-row .lt-value .won {{
+        font-family: 'Noto Sans KR', sans-serif;
+        font-size: 11px;
+        font-weight: 400;
+        color: #8b8570;
+    }}
+
     /* ---------- 총 합계 배너 ---------- */
     .grand-total-box {{
         margin-top: 8px;
@@ -547,7 +645,7 @@ def build_report_html(
             <div class="approval-title">결&nbsp;&nbsp;재</div>
             <div class="approval-cells">
                 <div class="approval-cell"><div class="role">담당</div><div class="stamp-space"></div></div>
-                <div class="approval-cell"><div class="role">실장</div><div class="stamp-space"></div></div>
+                <div class="approval-cell"><div class="role">부서장</div><div class="stamp-space"></div></div>
                 <div class="approval-cell"><div class="role">원장</div><div class="stamp-space"></div></div>
             </div>
         </div>
@@ -572,12 +670,13 @@ def build_report_html(
 
     <section class="report-section">
         <h2 class="section-title"><span class="marker"></span>수납금 내역</h2>
-        <table class="ledger-table"><tbody>{payment_rows}</tbody></table>
+        {payment_grid_html}
     </section>
 
     <section class="report-section">
         <h2 class="section-title"><span class="marker"></span>할인금 내역</h2>
-        <table class="ledger-table"><tbody>{discount_rows}</tbody></table>
+        {discount_grid_html}
+        {discount_total_html}
     </section>
 
     {custom_section_html}
