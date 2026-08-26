@@ -101,7 +101,49 @@ with st.container(border=True):
         )
 
 with st.container(border=True):
-    st.subheader("⑤ 기타 항목 (선택 - 병원별 커스텀 항목)")
+    st.subheader("⑤ 수술 및 시술 현황")
+    st.caption("전체 건수를 입력하고, 필요하면 아래에서 수술/시술명별로 세부 건수·금액을 추가하세요.")
+    proc = data["procedures"]
+    c1, c2 = st.columns(2)
+    with c1:
+        proc["surgery_total"] = st.number_input(
+            "수술 건수 (전체, 건)", min_value=0, step=1, value=int(proc.get("surgery_total", 0))
+        )
+    with c2:
+        proc["procedure_total"] = st.number_input(
+            "시술 건수 (전체, 건)", min_value=0, step=1, value=int(proc.get("procedure_total", 0))
+        )
+
+    st.markdown("**세부 내역 (선택)**")
+    for idx, item in enumerate(proc["items"]):
+        c1, c2, c3, c4 = st.columns([3, 2, 2, 1])
+        with c1:
+            item["name"] = st.text_input(
+                "수술/시술명", value=item.get("name", ""), key=f"proc_name_{idx}"
+            )
+        with c2:
+            item["count"] = st.number_input(
+                "건수", min_value=0, step=1, value=int(item.get("count", 0) or 0), key=f"proc_count_{idx}"
+            )
+        with c3:
+            item["amount"] = st.number_input(
+                "금액 (원, 선택)",
+                min_value=0,
+                step=1000,
+                value=int(to_decimal(item.get("amount", 0))),
+                key=f"proc_amt_{idx}",
+            )
+        with c4:
+            if st.button("삭제", key=f"proc_del_{idx}"):
+                proc["items"].pop(idx)
+                st.rerun()
+
+    if st.button("+ 수술/시술 항목 추가"):
+        proc["items"].append({"name": "", "count": 0, "amount": 0})
+        st.rerun()
+
+with st.container(border=True):
+    st.subheader("⑥ 기타 항목 (선택 - 병원별 커스텀 항목)")
     st.caption("예: 에스테틱, 시재, 검진 매출 등 병원마다 다른 항목을 자유롭게 추가하세요.")
 
     for idx, item in enumerate(data["custom_items"]):
@@ -130,9 +172,10 @@ with st.container(border=True):
 
 st.divider()
 totals = compute_totals(data)
-c1, c2, c3 = st.columns(3)
+c1, c2, c3, c4 = st.columns(4)
 c1.metric("총 수납액 (현금+카드+기타)", f"{int(totals['total_received']):,}원")
 c2.metric("할인 합계", f"{int(totals['total_discount']):,}원")
 c3.metric("최종 합계 (절사 반영)", f"{int(totals['grand_total']):,}원")
+c4.metric("수술+시술 건수", f"{int(totals['procedures_total_count']):,}건")
 
 st.info("입력을 마쳤으면 좌측 메뉴의 **'보고서 생성'**으로 이동해 미리보기 및 다운로드를 진행하세요.")

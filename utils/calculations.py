@@ -42,6 +42,17 @@ def outpatient_breakdown_sum(outpatient: Dict[str, int]) -> int:
     )
 
 
+def procedures_amount_sum(items: list) -> Decimal:
+    total = Decimal("0")
+    for item in items:
+        total += to_decimal(item.get("amount", 0))
+    return total
+
+
+def procedures_count_sum(items: list) -> int:
+    return sum(int(item.get("count", 0) or 0) for item in items)
+
+
 def custom_items_sum(custom_items: list, category: str) -> Decimal:
     total = Decimal("0")
     for item in custom_items:
@@ -76,6 +87,11 @@ def compute_totals(report_data: Dict[str, Any]) -> Dict[str, Any]:
         "discharged_today", 0
     )
 
+    procedures = report_data.get("procedures", {"surgery_total": 0, "procedure_total": 0, "items": []})
+    procedures_items = procedures.get("items", [])
+    procedures_item_amount_sum = procedures_amount_sum(procedures_items)
+    procedures_item_count_sum = procedures_count_sum(procedures_items)
+
     return {
         "cash": cash,
         "card": card,
@@ -91,6 +107,10 @@ def compute_totals(report_data: Dict[str, Any]) -> Dict[str, Any]:
         "outpatient_breakdown_sum": breakdown_sum,
         "outpatient_mismatch": outpatient_mismatch,
         "net_admission_change": net_admission_change,
+        "procedures_item_amount_sum": procedures_item_amount_sum,
+        "procedures_item_count_sum": procedures_item_count_sum,
+        "procedures_total_count": procedures.get("surgery_total", 0)
+        + procedures.get("procedure_total", 0),
     }
 
 

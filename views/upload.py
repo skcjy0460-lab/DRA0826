@@ -45,6 +45,11 @@ if st.session_state.extracted_review:
         "admission": dict(extracted.get("admission", {})),
         "payment": dict(extracted.get("payment", {})),
         "discount": dict(extracted.get("discount", {})),
+        "procedures": {
+            "surgery_total": extracted.get("procedures", {}).get("surgery_total", 0),
+            "procedure_total": extracted.get("procedures", {}).get("procedure_total", 0),
+            "items": list(extracted.get("procedures", {}).get("items", []) or []),
+        },
     }
 
     with st.container(border=True):
@@ -104,6 +109,23 @@ if st.session_state.extracted_review:
             disc["discount"] = st.number_input(
                 "할인", value=int(disc.get("discount", 0) or 0), key="rv_disc_disc"
             )
+
+    with st.container(border=True):
+        st.markdown("**수술 및 시술 현황**")
+        proc = review["procedures"]
+        c1, c2 = st.columns(2)
+        with c1:
+            proc["surgery_total"] = st.number_input(
+                "수술 건수 합계", value=int(proc.get("surgery_total", 0) or 0), key="rv_proc_surgery"
+            )
+        with c2:
+            proc["procedure_total"] = st.number_input(
+                "시술 건수 합계", value=int(proc.get("procedure_total", 0) or 0), key="rv_proc_procedure"
+            )
+        if proc["items"]:
+            st.caption("세부 내역 (수정하려면 '데이터 입력' 화면에서 편집하세요)")
+            for it in proc["items"]:
+                st.text(f"- {it.get('name', '')}: {it.get('count', 0)}건 / {it.get('amount', 0):,}원")
 
     c1, c2 = st.columns(2)
     with c1:

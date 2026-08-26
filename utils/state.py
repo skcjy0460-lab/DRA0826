@@ -55,6 +55,12 @@ def default_report_data() -> Dict[str, Any]:
             "exemption": _decimal_default(),  # 감면
             "discount": _decimal_default(),  # 할인
         },
+        # 수술 및 시술 현황
+        "procedures": {
+            "surgery_total": 0,  # 수술 건수 합계
+            "procedure_total": 0,  # 시술 건수 합계
+            "items": [],  # [{"name": str, "count": int, "amount": Decimal}] 수술/시술별 세부 내역
+        },
         # 사용자 정의 항목 (병원마다 다른 항목 대응)
         "custom_items": [],  # [{"label": str, "amount": Decimal, "category": "인원"|"금액"}]
         "ai_comment": "",
@@ -62,9 +68,20 @@ def default_report_data() -> Dict[str, Any]:
     }
 
 
+def _backfill_missing_sections(data: Dict[str, Any]) -> Dict[str, Any]:
+    """이전 세션에서 만들어진 report_data에 새로 추가된 섹션이 없으면 채워넣는다."""
+    defaults = default_report_data()
+    for key, value in defaults.items():
+        if key not in data:
+            data[key] = value
+    return data
+
+
 def init_state() -> None:
     if "report_data" not in st.session_state:
         st.session_state.report_data = default_report_data()
+    else:
+        st.session_state.report_data = _backfill_missing_sections(st.session_state.report_data)
     if "extracted_review" not in st.session_state:
         st.session_state.extracted_review = None  # 업로드 후 검토 대기중인 데이터
     if "prev_report" not in st.session_state:

@@ -28,7 +28,7 @@ def _json_default(o):
 def report_data_to_csv_bytes(report_data: Dict[str, Any]) -> bytes:
     """report_data를 단일행 CSV로 직렬화 (각 셀에 JSON 문자열 저장하여 구조 보존)."""
     flat = {}
-    for section in ("meta", "outpatient", "admission", "payment", "discount"):
+    for section in ("meta", "outpatient", "admission", "payment", "discount", "procedures"):
         flat[section] = json.dumps(report_data[section], default=_json_default, ensure_ascii=False)
     flat["custom_items"] = json.dumps(
         report_data.get("custom_items", []), default=_json_default, ensure_ascii=False
@@ -47,5 +47,9 @@ def csv_bytes_to_report_data(file_bytes: bytes) -> Optional[Dict[str, Any]]:
     data = {}
     for section in ("meta", "outpatient", "admission", "payment", "discount"):
         data[section] = json.loads(row[section])
+    if "procedures" in row and pd.notna(row["procedures"]):
+        data["procedures"] = json.loads(row["procedures"])
+    else:
+        data["procedures"] = {"surgery_total": 0, "procedure_total": 0, "items": []}
     data["custom_items"] = json.loads(row.get("custom_items", "[]"))
     return data

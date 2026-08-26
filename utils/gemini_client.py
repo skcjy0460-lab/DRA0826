@@ -46,6 +46,15 @@ EXTRACTION_SCHEMA_HINT = {
         "exemption": "감면 금액(숫자)",
         "discount": "할인 금액(숫자)",
     },
+    "procedures": {
+        "surgery_total": "수술 건수 합계(정수)",
+        "procedure_total": "시술 건수 합계(정수)",
+        "items": (
+            "수술/시술별 세부 내역 배열, 각 원소는 "
+            '{"name": "수술/시술명", "count": 건수(정수), "amount": 금액(숫자, 없으면 0)} '
+            "형태. 세부 내역이 없으면 빈 배열 []."
+        ),
+    },
 }
 
 

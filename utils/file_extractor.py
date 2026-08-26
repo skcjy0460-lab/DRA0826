@@ -63,4 +63,24 @@ def merge_extracted_into_schema(extracted: Dict[str, Any], base_schema: Dict[str
             for key, val in extracted[section].items():
                 if key in merged[section]:
                     merged[section][key] = val
+
+    if "procedures" in extracted and isinstance(extracted["procedures"], dict):
+        proc = extracted["procedures"]
+        merged["procedures"]["surgery_total"] = proc.get(
+            "surgery_total", merged["procedures"]["surgery_total"]
+        )
+        merged["procedures"]["procedure_total"] = proc.get(
+            "procedure_total", merged["procedures"]["procedure_total"]
+        )
+        items = proc.get("items", [])
+        if isinstance(items, list):
+            merged["procedures"]["items"] = [
+                {
+                    "name": it.get("name", ""),
+                    "count": it.get("count", 0) or 0,
+                    "amount": it.get("amount", 0) or 0,
+                }
+                for it in items
+                if isinstance(it, dict)
+            ]
     return merged
